@@ -1,5 +1,5 @@
 import http from 'node:http';
-import {timingSafeEqual} from 'node:crypto';
+import {timingSafeEqual,createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 const PORT=Number(process.env.PORT||3000);
 function readSecret(name){
@@ -8,6 +8,8 @@ function readSecret(name){
 }
 const API_KEY=readSecret('GEMINI_API_KEY');
 const TOKEN=readSecret('SPLIIT_GATEWAY_TOKEN');
+// Temporary diagnostic: compare a short SHA-256 fingerprint, never the token itself.
+const tokenFingerprint=TOKEN?createHash('sha256').update(TOKEN).digest('hex').slice(0,16):'missing';
 const MODEL='gemini-3.5-flash-lite';
 let geminiKeyStatus='checking';
 async function checkGeminiKey(){
@@ -61,4 +63,4 @@ http.createServer(async(req,res)=>{
   if((p.kind==='receipt'&&result.kind!=='receipt')||(audio&&result.kind!=='voice'))return reply(res,422,{error:'AI_CANNOT_READ'});
   reply(res,200,result);
  }catch(e){console.warn('Processing:',String(e?.message||e).slice(0,50));if(!res.headersSent)reply(res,e?.message==='TOO_LARGE'?413:502,{error:e?.message==='TOO_LARGE'?'TOO_LARGE':'AI_PROCESSING_FAILED'});}
-}).listen(PORT,'0.0.0.0',()=>{console.log('Spliit Gemini gateway ready');void checkGeminiKey();});
+}).listen(PORT,'0.0.0.0',()=>{console.log('Spliit Gemini gateway ready; token fingerprint:',tokenFingerprint,'length:',TOKEN.length);void checkGeminiKey();});

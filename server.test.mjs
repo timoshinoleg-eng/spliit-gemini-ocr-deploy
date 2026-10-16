@@ -11,6 +11,8 @@ test('gateway requires bearer auth and validates file input',async()=>{
    await new Promise(r=>setTimeout(r,80));
   }
   assert.equal(active,true,'health');
+  const liveness=await fetch('http://127.0.0.1:'+port+'/live');
+  assert.equal(liveness.status,200);
   const unauthed=await fetch('http://127.0.0.1:'+port+'/v1/analyze',{method:'POST'});
   assert.equal(unauthed.status,401);
   const tooSmall=await fetch('http://127.0.0.1:'+port+'/v1/analyze',{method:'POST',headers:{Authorization:'Bearer local_test_token_very_long','Content-Type':'application/json'},body:JSON.stringify({kind:'receipt',mimeType:'image/jpeg',data:'bad'})});

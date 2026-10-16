@@ -33,6 +33,7 @@ function clean(x){
 }
 let recent=[];
 http.createServer(async(req,res)=>{
+ if(req.url==='/live'&&req.method==='GET')return reply(res,200,{ok:true});
  if(req.url==='/health'&&req.method==='GET')return reply(res,API_KEY&&TOKEN?200:503,{ok:!!(API_KEY&&TOKEN),model:MODEL});
  if(req.url!=='/v1/analyze'||req.method!=='POST')return reply(res,404,{error:'NOT_FOUND'});
  if(!authorized(req.headers.authorization))return reply(res,401,{error:'UNAUTHORIZED'});

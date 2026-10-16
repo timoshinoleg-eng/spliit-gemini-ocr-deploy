@@ -15,7 +15,7 @@ function prompt(kind){
  if(kind==='voice')return safety+' Голосовое сообщение о тратах. Верни {"kind":"voice","title":"Трата","totalAmount":12345,"currency":"RUB","date":null,"transcript":"слова без банковских реквизитов","payerName":null,"participantNames":[],"items":[],"confidence":0.8}. Не добавляй расходы автоматически.';
  throw Error('BAD_KIND');
 }
-function modelText(x){if(typeof x.output_text==='string')return x.output_text;return (x.output||[]).flatMap(y=>{let a=y.content||[];if(!Array.isArray(a))a=[a];return a.map(z=>z.text||'')}).join('\n')}
+function modelText(x){if(typeof x.output_text==='string')return x.output_text;const steps=[...(x.steps||[]).filter(s=>s.type==='model_output'),...(x.output||[])];return steps.flatMap(y=>{if(y?.type==='text'&&typeof y.text==='string')return [y.text];let a=y?.content||[];if(!Array.isArray(a))a=[a];return a.map(z=>z?.text||'')}).join('\n')}
 function clean(x){
  const raw=modelText(x),start=raw.indexOf('{'),end=raw.lastIndexOf('}');
  if(start<0||end<start)throw Error('INVALID_MODEL_OUTPUT');
@@ -28,7 +28,7 @@ function clean(x){
 }
 let recent=[];
 http.createServer(async(req,res)=>{
- if(req.url==='/health'&&req.method==='GET')return reply(res,200,{ok:true,model:MODEL});
+ if(req.url==='/health'&&req.method==='GET')return reply(res,API_KEY&&TOKEN?200:503,{ok:!!(API_KEY&&TOKEN),model:MODEL});
  if(req.url!=='/v1/analyze'||req.method!=='POST')return reply(res,404,{error:'NOT_FOUND'});
  if(!authorized(req.headers.authorization))return reply(res,401,{error:'UNAUTHORIZED'});
  const now=Date.now();recent=recent.filter(t=>now-t<60000);

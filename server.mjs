@@ -9,6 +9,16 @@ function readSecret(name){
 const API_KEY=readSecret('GEMINI_API_KEY');
 const TOKEN=readSecret('SPLIIT_GATEWAY_TOKEN');
 const MODEL='gemini-3.5-flash-lite';
+let geminiKeyStatus='checking';
+async function checkGeminiKey(){
+ if(!API_KEY){geminiKeyStatus='missing';return;}
+ try{
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1',{
+    headers:{'x-goog-api-key':API_KEY},signal:AbortSignal.timeout(15000)});
+  geminiKeyStatus=r.ok?'valid':'http_'+r.status;
+ }catch{geminiKeyStatus='network_error';}
+ console.log('Gemini key validation:',geminiKeyStatus);
+}
 const MIME=new Set(['image/jpeg','image/png','image/webp','audio/ogg','audio/opus','audio/mpeg','audio/mp3','audio/wav','audio/webm','audio/m4a']);
 function reply(r,s,o){r.writeHead(s,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});r.end(JSON.stringify(o));}
 function authorized(h){const x=Buffer.from(h||''),y=Buffer.from('Bearer '+TOKEN);return !!TOKEN&&x.length===y.length&&timingSafeEqual(x,y)}
@@ -34,7 +44,7 @@ function clean(x){
 let recent=[];
 http.createServer(async(req,res)=>{
  if(req.url==='/live'&&req.method==='GET')return reply(res,200,{ok:true});
- if(req.url==='/health'&&req.method==='GET')return reply(res,API_KEY&&TOKEN?200:503,{ok:!!(API_KEY&&TOKEN),model:MODEL});
+ if(req.url==='/health'&&req.method==='GET')return reply(res,API_KEY&&TOKEN?200:503,{ok:!!(API_KEY&&TOKEN),model:MODEL,googleKeyStatus:geminiKeyStatus});
  if(req.url!=='/v1/analyze'||req.method!=='POST')return reply(res,404,{error:'NOT_FOUND'});
  if(!authorized(req.headers.authorization))return reply(res,401,{error:'UNAUTHORIZED'});
  const now=Date.now();recent=recent.filter(t=>now-t<60000);
@@ -51,4 +61,4 @@ http.createServer(async(req,res)=>{
   if((p.kind==='receipt'&&result.kind!=='receipt')||(audio&&result.kind!=='voice'))return reply(res,422,{error:'AI_CANNOT_READ'});
   reply(res,200,result);
  }catch(e){console.warn('Processing:',String(e?.message||e).slice(0,50));if(!res.headersSent)reply(res,e?.message==='TOO_LARGE'?413:502,{error:e?.message==='TOO_LARGE'?'TOO_LARGE':'AI_PROCESSING_FAILED'});}
-}).listen(PORT,'0.0.0.0',()=>console.log('Spliit Gemini gateway ready'));
+}).listen(PORT,'0.0.0.0',()=>{console.log('Spliit Gemini gateway ready');void checkGeminiKey();});

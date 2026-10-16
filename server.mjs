@@ -1,8 +1,13 @@
 import http from 'node:http';
 import {timingSafeEqual} from 'node:crypto';
+import {readFileSync} from 'node:fs';
 const PORT=Number(process.env.PORT||3000);
-const API_KEY=process.env.GEMINI_API_KEY||'';
-const TOKEN=process.env.SPLIIT_GATEWAY_TOKEN||'';
+function readSecret(name){
+ if(process.env[name])return String(process.env[name]).trim();
+ try{return readFileSync('/etc/secrets/'+name,'utf8').trim()}catch{return ''}
+}
+const API_KEY=readSecret('GEMINI_API_KEY');
+const TOKEN=readSecret('SPLIIT_GATEWAY_TOKEN');
 const MODEL='gemini-3.5-flash-lite';
 const MIME=new Set(['image/jpeg','image/png','image/webp','audio/ogg','audio/opus','audio/mpeg','audio/mp3','audio/wav','audio/webm','audio/m4a']);
 function reply(r,s,o){r.writeHead(s,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});r.end(JSON.stringify(o));}
